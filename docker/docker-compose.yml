@@ -26,6 +26,13 @@ services:
 
     networks:
       - supply-chain-network
+
+    healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 20s
   
    mariadb:
 
@@ -47,6 +54,127 @@ services:
 
     networks:
       - supply-chain-network
+    
+    healthcheck:
+    test:
+      [
+        "CMD",
+        "mariadb-admin",
+        "ping",
+        "-h",
+        "localhost",
+        "-u",
+        "root",
+        "-p${MARIADB_ROOT_PASSWORD}"
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  
+   redis-cache:
+
+    image: redis:7-alpine
+
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-cache-data:/data
+
+    networks:
+      - supply-chain-network
+
+    healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  
+   redis-queue:
+
+    image: redis:7-alpine
+
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-queue-data:/data
+
+    networks:
+      - supply-chain-network
+    
+    healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+   
+   redis-socketio:
+
+    image: redis:7-alpine
+
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-socketio-data:/data
+
+    networks:
+      - supply-chain-network
+    
+    healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  
+   erpnext:
+
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+
+    restart: unless-stopped
+
+    depends_on:
+
+    mariadb:
+      condition: service_healthy
+
+    redis-cache:
+      condition: service_healthy
+
+    redis-queue:
+      condition: service_healthy
+
+    redis-socketio:
+      condition: service_healthy
+
+    ports:
+      - "8000:8000"
+
+    environment:
+
+      DB_HOST: mariadb
+
+      DB_PORT: 3306
+
+      REDIS_CACHE: redis://redis-cache:6379
+
+      REDIS_QUEUE: redis://redis-queue:6379
+
+      REDIS_SOCKETIO: redis://redis-socketio:6379
+
+      SITE_NAME: ${ERPNEXT_SITE}
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+      - erpnext-logs:/home/frappe/frappe-bench/logs
+
+    networks:
+      - supply-chain-network
 
 networks:
 
@@ -58,3 +186,13 @@ volumes:
   postgres-data:
 
   mariadb-data:
+
+  redis-cache-data:
+
+  redis-queue-data:
+
+  redis-socketio-data:
+
+  erpnext-sites:
+
+  erpnext-logs:
