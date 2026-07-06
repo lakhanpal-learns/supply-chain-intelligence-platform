@@ -1,0 +1,28 @@
+# Environment Files
+**/.env
+
+# Allow example environment files
+!**/.env.example
+
+# Python
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Docker Volumes
+docker/volumes/
+
+# Airflow
+docker/airflow/logs/
+
+# PostgreSQL Data
+docker/postgres/data/
+
+# MariaDB Data
+docker/mariadb/data/
