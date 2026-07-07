@@ -1,16 +1,14 @@
 # ============================================================================
 # Supply Chain Intelligence Platform
-# Docker Compose Infrastructure
+# Core Infrastructure
 # ============================================================================
 
 name: supply-chain-intelligence-platform
 
 services:
 
-   postgres:
-
+  postgres:
     image: postgres:16
-
     restart: unless-stopped
 
     ports:
@@ -28,17 +26,18 @@ services:
       - supply-chain-network
 
     healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 20s
-  
-   mariadb:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
+  mariadb:
     image: mariadb:11.8
-
     restart: unless-stopped
+
+    ports:
+      - "3306:3306"
 
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
@@ -46,36 +45,31 @@ services:
       MARIADB_USER: ${MARIADB_USER}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
 
-    ports:
-      - "3306:3306"
-
     volumes:
       - mariadb-data:/var/lib/mysql
 
     networks:
       - supply-chain-network
-    
+
     healthcheck:
-    test:
-      [
-        "CMD",
-        "mariadb-admin",
-        "ping",
-        "-h",
-        "localhost",
-        "-u",
-        "root",
-        "-p${MARIADB_ROOT_PASSWORD}"
-      ]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 30s
-  
-   redis-cache:
+      test:
+        [
+          "CMD",
+          "mariadb-admin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MARIADB_ROOT_PASSWORD}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  redis-cache:
     image: redis:7-alpine
-
     restart: unless-stopped
 
     command: redis-server --appendonly yes
@@ -87,15 +81,13 @@ services:
       - supply-chain-network
 
     healthcheck:
-    test: ["CMD", "redis-cli", "ping"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-  
-   redis-queue:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  redis-queue:
     image: redis:7-alpine
-
     restart: unless-stopped
 
     command: redis-server --appendonly yes
@@ -105,17 +97,15 @@ services:
 
     networks:
       - supply-chain-network
-    
+
     healthcheck:
-    test: ["CMD", "redis-cli", "ping"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-   
-   redis-socketio:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  redis-socketio:
     image: redis:7-alpine
-
     restart: unless-stopped
 
     command: redis-server --appendonly yes
@@ -125,74 +115,30 @@ services:
 
     networks:
       - supply-chain-network
-    
+
     healthcheck:
-    test: ["CMD", "redis-cli", "ping"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-  
-   erpnext:
-
-    image: frappe/erpnext:${ERPNEXT_VERSION}
-
-    restart: unless-stopped
-
-    depends_on:
-
-    mariadb:
-      condition: service_healthy
-
-    redis-cache:
-      condition: service_healthy
-
-    redis-queue:
-      condition: service_healthy
-
-    redis-socketio:
-      condition: service_healthy
-
-    ports:
-      - "8000:8000"
-
-    environment:
-
-      DB_HOST: mariadb
-
-      DB_PORT: 3306
-
-      REDIS_CACHE: redis://redis-cache:6379
-
-      REDIS_QUEUE: redis://redis-queue:6379
-
-      REDIS_SOCKETIO: redis://redis-socketio:6379
-
-      SITE_NAME: ${ERPNEXT_SITE}
-
-    volumes:
-      - erpnext-sites:/home/frappe/frappe-bench/sites
-      - erpnext-logs:/home/frappe/frappe-bench/logs
-
-    networks:
-      - supply-chain-network
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
-
   supply-chain-network:
+    name: ${DOCKER_NETWORK}
     driver: bridge
 
 volumes:
-
   postgres-data:
+    name: ${POSTGRES_VOLUME}
 
   mariadb-data:
+    name: ${MARIADB_VOLUME}
 
   redis-cache-data:
+    name: redis-cache-data
 
   redis-queue-data:
+    name: redis-queue-data
 
   redis-socketio-data:
-
-  erpnext-sites:
-
-  erpnext-logs:
+    name: redis-socketio-data

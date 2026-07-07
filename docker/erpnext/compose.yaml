@@ -98,3 +98,8 @@ services:
 # ERPNext requires local assets access (Frappe does not)
 volumes:
   sites:
+
+networks:
+  default:
+    name: ${DOCKER_NETWORK}
+    external: true
