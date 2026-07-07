@@ -121,6 +121,184 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  
+  configurator:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+    restart: on-failure
+
+    entrypoint:
+      - bash
+      - -c
+
+    command: >
+      ls -1 apps > sites/apps.txt;
+      bench set-config -g db_host mariadb;
+      bench set-config -gp db_port 3306;
+      bench set-config -g redis_cache "redis://redis-cache:6379";
+      bench set-config -g redis_queue "redis://redis-queue:6379";
+      bench set-config -g redis_socketio "redis://redis-socketio:6379";
+      bench set-config -gp socketio_port 9000;
+      bench set-config -g chromium_path /usr/bin/chromium-headless-shell;
+
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+      redis-cache:
+        condition: service_healthy
+
+      redis-queue:
+        condition: service_healthy
+
+      redis-socketio:
+        condition: service_healthy
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+
+  backend:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      configurator:
+        condition: service_started
+
+    environment:
+      GUNICORN_THREADS: 4
+      GUNICORN_WORKERS: 2
+      GUNICORN_TIMEOUT: 120
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+
+  frontend:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      backend:
+        condition: service_started
+
+      websocket:
+        condition: service_started
+
+    command:
+      - nginx-entrypoint.sh
+
+    ports:
+      - "8000:8080"
+
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${ERPNEXT_SITE}
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+
+  websocket:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      configurator:
+        condition: service_started
+
+    command:
+      - node
+      - /home/frappe/frappe-bench/apps/frappe/socketio.js
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+  
+  queue-short:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      configurator:
+        condition: service_started
+
+    command:
+      - bench
+      - worker
+      - --queue
+      - short,default
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+
+  queue-long:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      configurator:
+        condition: service_started
+
+    command:
+      - bench
+      - worker
+      - --queue
+      - long,default,short
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
+
+  scheduler:
+    image: frappe/erpnext:${ERPNEXT_VERSION}
+    platform: linux/amd64
+
+    restart: unless-stopped
+
+    depends_on:
+      configurator:
+        condition: service_started
+
+    command:
+      - bench
+      - schedule
+
+    volumes:
+      - erpnext-sites:/home/frappe/frappe-bench/sites
+
+    networks:
+      - supply-chain-network
 
 networks:
   supply-chain-network:
@@ -142,3 +320,6 @@ volumes:
 
   redis-socketio-data:
     name: redis-socketio-data
+
+  erpnext-sites:
+    name: ${ERP_SITES_VOLUME}
