@@ -26,3 +26,6 @@ docker/postgres/data/
 
 # MariaDB Data
 docker/mariadb/data/
+
+#documentation 
+documentation/
