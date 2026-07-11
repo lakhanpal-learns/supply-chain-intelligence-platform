@@ -12,7 +12,7 @@ Supply Chain Intelligence Platform
 |-------|-------|
 | Document Type | API Mapping |
 | Version | 1.0 |
-| Status | Draft |
+| Status | final |
 | Project | Supply Chain Intelligence Platform |
 | Prepared By | Lakhanpal |
 | Last Updated | July 2026 |
@@ -45,15 +45,19 @@ The ETL pipeline communicates with ERPNext exclusively through the official REST
 ```text
 Python ETL
       │
- HTTPS Request
+Token Authentication
       │
-      ▼
+HTTPS Request
+      │
 ERPNext REST API
       │
- JSON Response
+JSON Response
       │
-      ▼
 Bronze Layer
+      │
+Silver Layer
+      │
+Gold Layer
 ```
 
 No direct SQL queries will be executed against the ERPNext MariaDB database.
@@ -65,7 +69,7 @@ No direct SQL queries will be executed against the ERPNext MariaDB database.
 For the local development environment:
 
 ```
-http://localhost:8000/api/resource/
+http://globalmart.localhost:8080/api/resource/
 ```
 
 Every business entity is accessed by appending its DocType to the base URL.
@@ -82,7 +86,7 @@ http://localhost:8000/api/resource/Item
 
 All API requests require authentication.
 
-Version 1 will use ERPNext API Key and API Secret.
+Version 1 uses ERPNext API Key and API Secret generated from the Administrator user account. Credentials are stored securely using environment variables.
 
 Authentication Header
 
@@ -129,25 +133,25 @@ Example
 
 # API Mapping
 
-| DocType | Endpoint | Method | Incremental Field | Primary Key | Target Bronze Table |
-|----------|----------|--------|------------------|-------------|---------------------|
-| Supplier | /api/resource/Supplier | GET | modified | name | bronze_supplier |
-| Item | /api/resource/Item | GET | modified | name | bronze_item |
-| Warehouse | /api/resource/Warehouse | GET | modified | name | bronze_warehouse |
-| Bin | /api/resource/Bin | GET | modified | name | bronze_bin |
-| Material Request | /api/resource/Material Request | GET | modified | name | bronze_material_request |
-| Purchase Order | /api/resource/Purchase Order | GET | modified | name | bronze_purchase_order |
-| Purchase Receipt | /api/resource/Purchase Receipt | GET | modified | name | bronze_purchase_receipt |
-| Stock Entry | /api/resource/Stock Entry | GET | modified | name | bronze_stock_entry |
-| Customer | /api/resource/Customer | GET | modified | name | bronze_customer |
-| Sales Order | /api/resource/Sales Order | GET | modified | name | bronze_sales_order |
-| Delivery Note | /api/resource/Delivery Note | GET | modified | name | bronze_delivery_note |
+| DocType               | Endpoint                            | Method | Incremental Field | Primary Key | Target Bronze Table          |
+| --------------------- | ----------------------------------- | ------ | ----------------- | ----------- | ---------------------------- |
+| Item Group            | /api/resource/Item Group            | GET    | modified          | name        | bronze_item_group            |
+| UOM                   | /api/resource/UOM                   | GET    | modified          | name        | bronze_uom                   |
+| Purchase Order Item   | /api/resource/Purchase Order Item   | GET    | modified          | name        | bronze_purchase_order_item   |
+| Purchase Receipt Item | /api/resource/Purchase Receipt Item | GET    | modified          | name        | bronze_purchase_receipt_item |
+| Purchase Invoice      | /api/resource/Purchase Invoice      | GET    | modified          | name        | bronze_purchase_invoice      |
+| Purchase Invoice Item | /api/resource/Purchase Invoice Item | GET    | modified          | name        | bronze_purchase_invoice_item |
+| Sales Invoice         | /api/resource/Sales Invoice         | GET    | modified          | name        | bronze_sales_invoice         |
+| Sales Invoice Item    | /api/resource/Sales Invoice Item    | GET    | modified          | name        | bronze_sales_invoice_item    |
+| Stock Entry Detail    | /api/resource/Stock Entry Detail    | GET    | modified          | name        | bronze_stock_entry_detail    |
+| Stock Ledger Entry    | /api/resource/Stock Ledger Entry    | GET    | modified          | name        | bronze_stock_ledger_entry    |
+
 
 ---
 
 # Incremental Extraction
 
-All transactional and master tables contain the **modified** timestamp.
+All transactional and master tables contain the **modified** timestamp. The modified field was validated across all selected ERPNext DocTypes during Phase 2.
 
 The ETL pipeline will request only records modified after the previous successful extraction.
 
@@ -180,7 +184,7 @@ The ETL pipeline will continue requesting pages until no additional records are 
 
 # Selected Fields
 
-To reduce payload size, only required fields will be extracted.
+To reduce payload size, only required fields will be extracted. Field selection is based on the validated ERPNext schema and will be customized for each DocType.
 
 Example
 
@@ -234,6 +238,10 @@ Each API request should capture:
 - Records extracted
 - Retry count
 - Success or failure
+- API endpoint
+- DocType
+- Records skipped
+- Records failed
 
 These logs will support monitoring and troubleshooting.
 

@@ -12,7 +12,7 @@ Supply Chain Intelligence Platform
 |-------|-------|
 | Document Type | Data Extraction Strategy |
 | Version | 1.0 |
-| Status | Draft |
+| Status | final |
 | Project | Supply Chain Intelligence Platform |
 | Prepared By | Lakhanpal |
 | Last Updated | July 2026 |
@@ -36,23 +36,21 @@ The ETL pipeline follows a modern batch-based extraction architecture.
 ```text
 ERPNext REST API
         │
-        ▼
 Authentication
         │
-        ▼
 Data Extraction
         │
-        ▼
 Validation
         │
-        ▼
 Raw JSON Backup
         │
-        ▼
-Bronze Layer
+Bronze
         │
-        ▼
-Execution Logs
+Silver
+        │
+Gold
+        │
+Power BI
 ```
 
 Each stage is isolated to simplify monitoring, debugging, and recovery.
@@ -117,19 +115,30 @@ This strategy minimizes unnecessary data movement while keeping the analytics wa
 
 Master data is extracted before transactional data.
 
-| Step | DocType | Category |
-|------|----------|----------|
-| 1 | Supplier | Master |
-| 2 | Customer | Master |
-| 3 | Item | Master |
-| 4 | Warehouse | Master |
-| 5 | Bin | Inventory |
-| 6 | Material Request | Transaction |
-| 7 | Purchase Order | Transaction |
-| 8 | Purchase Receipt | Transaction |
-| 9 | Stock Entry | Transaction |
-| 10 | Sales Order | Transaction |
-| 11 | Delivery Note | Transaction |
+| Step | DocType               | Category           |
+| ---- | --------------------- | ------------------ |
+| 1    | Supplier              | Master             |
+| 2    | Customer              | Master             |
+| 3    | Item                  | Master             |
+| 4    | Warehouse             | Master             |
+| 5    | Item Group            | Master             |
+| 6    | UOM                   | Master             |
+| 7    | Bin                   | Inventory          |
+| 8    | Material Request      | Transaction        |
+| 9    | Purchase Order        | Transaction        |
+| 10   | Purchase Order Item   | Transaction Detail |
+| 11   | Purchase Receipt      | Transaction        |
+| 12   | Purchase Receipt Item | Transaction Detail |
+| 13   | Purchase Invoice      | Transaction        |
+| 14   | Purchase Invoice Item | Transaction Detail |
+| 15   | Stock Entry           | Transaction        |
+| 16   | Stock Entry Detail    | Transaction Detail |
+| 17   | Stock Ledger Entry    | Inventory          |
+| 18   | Sales Order           | Transaction        |
+| 19   | Delivery Note         | Transaction        |
+| 20   | Sales Invoice         | Transaction        |
+| 21   | Sales Invoice Item    | Transaction Detail |
+
 
 This sequence preserves referential integrity.
 
@@ -244,6 +253,10 @@ Each extraction records:
 - HTTP status
 - Retry attempts
 - Final status
+- API endpoint
+- Records loaded
+- Records skipped
+- Failed records
 
 Logs provide operational visibility and support troubleshooting.
 
@@ -260,6 +273,7 @@ Validation includes:
 - Non-empty primary keys
 - Duplicate detection within response
 - API response status
+- Parent-child relationship validation
 
 Comprehensive data quality checks will be implemented during Phase 5.
 
@@ -321,6 +335,7 @@ The following architectural decisions were finalized.
 - JSON backups are created before database loading.
 - Every extraction generates operational logs.
 - Airflow will orchestrate future pipeline execution.
+- Fact tables will be built from child DocTypes (line items) rather than document headers.
 
 ---
 
@@ -359,6 +374,7 @@ With this document, Phase 2 establishes:
 - Module mapping
 - API mapping
 - ETL extraction strategy
+- Live validation against ERPNext APIs
 
 These deliverables provide a complete technical blueprint for Phase 3 (ETL Development).
 
