@@ -12,7 +12,7 @@ Supply Chain Intelligence Platform
 |-------|-------|
 | Document Type | Data Source Identification |
 | Version | 1.0 |
-| Status | Draft |
+| Status | final |
 | Project | Supply Chain Intelligence Platform |
 | Prepared By | Lakhanpal |
 | Last Updated | July 2026 |
@@ -68,6 +68,10 @@ The platform records and maintains data related to:
 - Purchase Receipts
 - Stock Movements
 - Sales Orders
+- Purchase Order Items
+- Purchase Receipt Items
+- Sales Invoice Items
+- Stock Entry Details
 - Delivery Notes
 - Returns
 
@@ -84,12 +88,19 @@ These operational records will serve as the single source of truth for downstrea
                  ERPNext Web UI
                        │
                        ▼
-               ERPNext Application
+                ERPNext Application
                        │
-                REST API Layer
+          REST API (Token Authentication)
                        │
                        ▼
-                  MariaDB Database
+                  Python ETL Service
+                       │
+                       ▼
+             PostgreSQL Data Warehouse
+            Bronze → Silver → Gold
+                       │
+                       ▼
+                    Power BI
 ```
 
 The analytics platform will not connect directly to the MariaDB database.
@@ -112,7 +123,7 @@ The following business domains were identified during Phase 1.
 | Business Domain | Required Data |
 |-----------------|---------------|
 | Procurement | Suppliers, Purchase Orders, Purchase Receipts |
-| Inventory | Items, Warehouses, Inventory Levels |
+| Inventory | Items, Warehouses, Inventory Levels (Stock Ledger Entries and Bin) |
 | Warehouse | Stock Entries, Inventory Movements |
 | Sales | Customers, Sales Orders, Delivery Notes |
 | Logistics | Deliveries, Shipment Information |
@@ -142,7 +153,7 @@ Characteristics include:
 
 - HTTPS communication
 - JSON responses
-- Token-based authentication
+- Token-based authentication using ERPNext API Key and API Secret.
 - Pagination support
 - Filtering
 - Incremental extraction using modification timestamps
@@ -233,7 +244,7 @@ Phase 2 produces the following outputs.
 - Source System Analysis
 - ERPNext Module Mapping
 - API Mapping
-- Source-to-Target Mapping
+- Validated Source-to-Target Mapping
 - Data Extraction Strategy
 
 These deliverables provide the blueprint for Phase 3 (ETL Development).
@@ -250,6 +261,9 @@ The following architectural decisions were finalized during this phase.
 - MariaDB is not queried directly.
 - PostgreSQL is reserved exclusively for analytics.
 - Incremental extraction will use the `modified` timestamp.
+- Fact tables will be built from ERPNext child DocTypes
+(e.g., Sales Invoice Item, Purchase Order Item, Stock Entry Detail)
+instead of document headers.
 
 ---
 

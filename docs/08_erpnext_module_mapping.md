@@ -12,7 +12,7 @@ Supply Chain Intelligence Platform
 |-------|-------|
 | Document Type | ERPNext Module Mapping |
 | Version | 1.0 |
-| Status | Draft |
+| Status | final |
 | Project | Supply Chain Intelligence Platform |
 | Prepared By | Lakhanpal |
 | Last Updated | July 2026 |
@@ -43,10 +43,16 @@ Purchase Requisition
 Purchase Order
       │
       ▼
+Purchase Order Item
+      │
+      ▼
 Purchase Receipt
       │
       ▼
-Warehouse Inventory
+Purchase Receipt Item
+      │
+      ▼
+  Warehouse
       │
       ▼
 Stock Movement
@@ -56,6 +62,12 @@ Sales Order
       │
       ▼
 Delivery Note
+      │
+      ▼
+Sales Invoice
+      │
+      ▼
+Sales Invoice Item
       │
       ▼
 Customer
@@ -68,19 +80,17 @@ Returns
 
 # ERPNext Module Mapping
 
-| Business Process | ERP Module | ERPNext DocType | Priority | Incremental Field | Target Bronze Table |
-|------------------|------------|-----------------|----------|------------------|---------------------|
-| Supplier Management | Buying | Supplier | High | modified | bronze_supplier |
-| Product Management | Stock | Item | High | modified | bronze_item |
-| Warehouse Management | Stock | Warehouse | High | modified | bronze_warehouse |
-| Inventory Management | Stock | Bin | High | modified | bronze_bin |
-| Purchase Requests | Buying | Material Request | Medium | modified | bronze_material_request |
-| Purchase Orders | Buying | Purchase Order | High | modified | bronze_purchase_order |
-| Purchase Receipts | Buying | Purchase Receipt | High | modified | bronze_purchase_receipt |
-| Inventory Movement | Stock | Stock Entry | High | modified | bronze_stock_entry |
-| Customer Management | Selling | Customer | High | modified | bronze_customer |
-| Sales Orders | Selling | Sales Order | High | modified | bronze_sales_order |
-| Deliveries | Selling | Delivery Note | High | modified | bronze_delivery_note |
+| Business Process       | ERP Module | ERPNext DocType       | Priority | Incremental Field | Target Bronze Table          |
+| ---------------------- | ---------- | --------------------- | -------- | ----------------- | ---------------------------- |
+| Purchase Order Lines   | Buying     | Purchase Order Item   | High     | modified          | bronze_purchase_order_item   |
+| Purchase Receipt Lines | Buying     | Purchase Receipt Item | High     | modified          | bronze_purchase_receipt_item |
+| Purchase Invoice       | Buying     | Purchase Invoice      | Medium   | modified          | bronze_purchase_invoice      |
+| Purchase Invoice Lines | Buying     | Purchase Invoice Item | Medium   | modified          | bronze_purchase_invoice_item |
+| Sales Invoice          | Selling    | Sales Invoice         | Medium   | modified          | bronze_sales_invoice         |
+| Sales Invoice Lines    | Selling    | Sales Invoice Item    | Medium   | modified          | bronze_sales_invoice_item    |
+| Stock Movement Details | Stock      | Stock Entry Detail    | High     | modified          | bronze_stock_entry_detail    |
+| Inventory Ledger       | Stock      | Stock Ledger Entry    | High     | modified          | bronze_stock_ledger_entry    |
+
 
 ---
 
@@ -159,6 +169,28 @@ Sales Order
       │
       ▼
 Delivery Note
+
+
+Purchase Order
+      │
+      ▼
+Purchase Order Item
+
+Purchase Receipt
+      │
+      ▼
+Purchase Receipt Item
+
+Sales Invoice
+      │
+      ▼
+Sales Invoice Item
+
+Stock Entry
+      │
+      ▼
+Stock Entry Detail
+
 ```
 
 These relationships define the order in which data should be extracted and later transformed.
@@ -169,15 +201,25 @@ These relationships define the order in which data should be extracted and later
 
 Certain DocTypes depend on others.
 
-| Parent Entity | Child Entity | Dependency |
-|---------------|--------------|------------|
-| Supplier | Purchase Order | Supplier must exist first |
-| Item | Purchase Order | Product must exist first |
-| Purchase Order | Purchase Receipt | Purchase Order reference |
-| Warehouse | Bin | Warehouse reference |
-| Item | Bin | Product reference |
-| Customer | Sales Order | Customer reference |
-| Sales Order | Delivery Note | Sales Order reference |
+| Parent Entity    | Child Entity          | Dependency                                                     |
+| ---------------- | --------------------- | -------------------------------------------------------------- |
+| Supplier         | Purchase Order        | Supplier must exist before Purchase Orders are extracted.      |
+| Customer         | Sales Order           | Customer must exist before Sales Orders are extracted.         |
+| Item             | Purchase Order Item   | Item must exist before Purchase Order Items are extracted.     |
+| Item             | Purchase Receipt Item | Item must exist before Purchase Receipt Items are extracted.   |
+| Item             | Purchase Invoice Item | Item must exist before Purchase Invoice Items are extracted.   |
+| Item             | Sales Invoice Item    | Item must exist before Sales Invoice Items are extracted.      |
+| Item             | Stock Entry Detail    | Item must exist before Stock Entry Details are extracted.      |
+| Warehouse        | Bin                   | Warehouse must exist before inventory snapshots are extracted. |
+| Item             | Bin                   | Item must exist before inventory snapshots are extracted.      |
+| Purchase Order   | Purchase Order Item   | Parent Purchase Order must exist before its line items.        |
+| Purchase Order   | Purchase Receipt      | Purchase Receipt references a Purchase Order.                  |
+| Purchase Receipt | Purchase Receipt Item | Parent Purchase Receipt must exist before its line items.      |
+| Purchase Invoice | Purchase Invoice Item | Parent Purchase Invoice must exist before its line items.      |
+| Sales Order      | Delivery Note         | Delivery Note references a Sales Order.                        |
+| Sales Invoice    | Sales Invoice Item    | Parent Sales Invoice must exist before its line items.         |
+| Stock Entry      | Stock Entry Detail    | Parent Stock Entry must exist before its detail records.       |
+
 
 These dependencies will determine the ETL extraction sequence.
 
@@ -187,19 +229,30 @@ These dependencies will determine the ETL extraction sequence.
 
 The ETL pipeline should extract data in the following order.
 
-| Step | DocType | Reason |
-|------|----------|--------|
-| 1 | Supplier | Master Data |
-| 2 | Customer | Master Data |
-| 3 | Item | Master Data |
-| 4 | Warehouse | Master Data |
-| 5 | Bin | Inventory Snapshot |
-| 6 | Material Request | Procurement Planning |
-| 7 | Purchase Order | Procurement Transactions |
-| 8 | Purchase Receipt | Goods Receipt |
-| 9 | Stock Entry | Inventory Movement |
-| 10 | Sales Order | Sales Transactions |
-| 11 | Delivery Note | Fulfillment |
+| Step | DocType               | Reason                        |
+| ---- | --------------------- | ----------------------------- |
+| 1    | Supplier              | Master Data                   |
+| 2    | Customer              | Master Data                   |
+| 3    | Item                  | Master Data                   |
+| 4    | Warehouse             | Master Data                   |
+| 5    | Item Group            | Master Data Classification    |
+| 6    | UOM                   | Measurement Reference Data    |
+| 7    | Bin                   | Inventory Snapshot            |
+| 8    | Material Request      | Procurement Planning          |
+| 9    | Purchase Order        | Procurement Transactions      |
+| 10   | Purchase Order Item   | Purchase Order Line Items     |
+| 11   | Purchase Receipt      | Goods Receipt                 |
+| 12   | Purchase Receipt Item | Goods Receipt Line Items      |
+| 13   | Purchase Invoice      | Procurement Cost Transactions |
+| 14   | Purchase Invoice Item | Purchase Invoice Line Items   |
+| 15   | Stock Entry           | Inventory Movement            |
+| 16   | Stock Entry Detail    | Inventory Movement Line Items |
+| 17   | Stock Ledger Entry    | Inventory Transaction History |
+| 18   | Sales Order           | Sales Transactions            |
+| 19   | Delivery Note         | Order Fulfillment             |
+| 20   | Sales Invoice         | Sales Billing                 |
+| 21   | Sales Invoice Item    | Sales Invoice Line Items      |
+
 
 Master data is extracted before transactional data to maintain referential integrity.
 
@@ -252,7 +305,7 @@ Every ETL job implemented in Phase 3 will reference this document.
 
 # Key Takeaways
 
-- Eleven ERPNext DocTypes have been selected for Version 1.
+- The project uses a validated set of ERPNext master, transaction, and child DocTypes required for Version 1 analytics.
 - Only supply chain modules are included.
 - Extraction order is based on business dependencies.
 - Incremental loading will use the `modified` timestamp.

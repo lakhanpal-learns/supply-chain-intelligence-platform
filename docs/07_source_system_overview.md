@@ -12,7 +12,7 @@ Supply Chain Intelligence Platform
 |-------|-------|
 | Document Type | Source System Overview |
 | Version | 1.0 |
-| Status | Draft |
+| Status | final |
 | Project | Supply Chain Intelligence Platform |
 | Prepared By | Lakhanpal |
 | Last Updated | July 2026 |
@@ -173,18 +173,25 @@ Supports real-time communication between the server and connected users.
 
 Version 1 of this project focuses on the following ERP modules.
 
-| Module | Business Purpose |
-|----------|------------------|
-| Supplier | Supplier Management |
-| Item | Product Master |
-| Warehouse | Warehouse Management |
-| Bin | Inventory Levels |
-| Purchase Order | Procurement |
-| Purchase Receipt | Goods Receipt |
-| Stock Entry | Inventory Movement |
-| Customer | Customer Management |
-| Sales Order | Customer Orders |
-| Delivery Note | Order Fulfillment |
+| Module                | Business Purpose              |
+| --------------------- | ----------------------------- |
+| Supplier              | Supplier Management           |
+| Item                  | Product Master                |
+| Warehouse             | Warehouse Management          |
+| Bin                   | Current Inventory Levels      |
+| Purchase Order        | Procurement                   |
+| Purchase Order Item   | Purchase Order Line Items     |
+| Purchase Receipt      | Goods Receipt                 |
+| Purchase Receipt Item | Goods Receipt Line Items      |
+| Stock Entry           | Inventory Movement            |
+| Stock Entry Detail    | Stock Movement Line Items     |
+| Stock Ledger Entry    | Inventory Transaction History |
+| Customer              | Customer Management           |
+| Sales Order           | Customer Orders               |
+| Delivery Note         | Order Fulfillment             |
+| Sales Invoice         | Sales Billing and Revenue     |
+| Sales Invoice Item    | Sales Invoice Line Items      |
+
 
 Modules outside the project scope, such as Manufacturing, HR, CRM, and Projects, are intentionally excluded.
 
@@ -195,6 +202,7 @@ Modules outside the project scope, such as Manufacturing, HR, CRM, and Projects,
 ERPNext organizes business information into **DocTypes**.
 
 Each DocType represents a business entity.
+Transaction DocTypes frequently contain child tables (line items), which are stored as separate DocTypes. These child DocTypes define the transaction grain used in the analytical fact tables.
 
 Examples include:
 
@@ -220,11 +228,14 @@ The integration follows this architecture.
 ```text
 ERPNext
      │
-REST API
+REST API (Token Authentication)
      │
 Python ETL
      │
-Analytics Warehouse
+PostgreSQL
+Bronze → Silver → Gold
+     │
+Power BI
 ```
 
 Direct database access is intentionally avoided.
@@ -262,9 +273,10 @@ The project primarily uses GET requests during ETL extraction.
 
 ERPNext supports multiple authentication mechanisms.
 
-For this project, API authentication will be implemented using secure API credentials generated within ERPNext.
+For this project, API authentication is implemented using ERPNext API Key and API Secret generated for the Administrator user.
 
-Credentials will be stored outside the application code using environment variables.
+Credentials are stored outside the application code using environment variables.
+
 
 ---
 
