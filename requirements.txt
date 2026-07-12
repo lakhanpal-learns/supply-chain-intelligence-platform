@@ -1,0 +1,12 @@
+requests
+python-dotenv
+pydantic
+pydantic-settings
+psycopg2-binary
+SQLAlchemy
+pandas
+tenacity
+pytest
+black
+flake8
+isort

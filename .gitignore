@@ -29,3 +29,34 @@ docker/mariadb/data/
 
 #documentation 
 documentation/
+
+# ------------------------
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+
+# Environment Variables
+.env
+
+# Logs
+*.log
+etl/logs/
+
+# JSON Backups
+etl/backup/
+
+# VS Code
+.vscode/
+
+# Pytest
+.pytest_cache/
+
+# OS Files
+.DS_Store
+Thumbs.db
