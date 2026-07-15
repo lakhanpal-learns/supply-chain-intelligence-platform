@@ -15,6 +15,8 @@ Responsibilities:
 import sys
 from enum import Enum
 from pathlib import Path
+from pydantic import SecretStr
+
 
 from pydantic import (
     BaseModel,
@@ -54,9 +56,9 @@ class LogLevel(str, Enum):
 class ERPSettings(BaseModel):
     base_url: HttpUrl = Field(alias="ERP_BASE_URL")
 
-    api_key: str = Field(alias="ERP_API_KEY")
+    api_key: SecretStr = Field(alias="ERP_API_KEY",min_length=1)
 
-    api_secret: str = Field(alias="ERP_API_SECRET")
+    api_secret: SecretStr = Field(alias="ERP_API_SECRET",min_length=1)
 
     timeout: int = Field(
         default=30,
@@ -71,13 +73,13 @@ class ERPSettings(BaseModel):
 # ============================================================
 
 class PostgreSQLSettings(BaseModel):
-    host: str = Field(alias="POSTGRES_HOST")
+    host: SecretStr = Field(alias="POSTGRES_HOST",min_length=1)
 
-    database: str = Field(alias="POSTGRES_DATABASE")
+    database: SecretStr = Field(alias="POSTGRES_DATABASE",min_length=1)
 
-    username: str = Field(alias="POSTGRES_USER")
+    username: SecretStr = Field(alias="POSTGRES_USER",min_length=1)
 
-    password: str = Field(alias="POSTGRES_PASSWORD")
+    password: SecretStr = Field(alias="POSTGRES_PASSWORD",min_length=1)
 
     port: int = Field(
         default=5432,
