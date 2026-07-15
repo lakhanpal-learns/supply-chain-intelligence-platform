@@ -54,15 +54,14 @@ class LogLevel(str, Enum):
 # ============================================================
 
 class ERPSettings(BaseModel):
-    base_url: HttpUrl = Field(alias="ERP_BASE_URL")
+    base_url: HttpUrl = Field(min_length=1)
 
-    api_key: SecretStr = Field(alias="ERP_API_KEY",min_length=1)
+    api_key: SecretStr = Field(min_length=1)
 
-    api_secret: SecretStr = Field(alias="ERP_API_SECRET",min_length=1)
+    api_secret: SecretStr = Field(min_length=1)
 
     timeout: int = Field(
         default=30,
-        alias="ERP_TIMEOUT",
         gt=0,
         le=300
     )
@@ -73,17 +72,16 @@ class ERPSettings(BaseModel):
 # ============================================================
 
 class PostgreSQLSettings(BaseModel):
-    host: SecretStr = Field(alias="POSTGRES_HOST",min_length=1)
+    host: SecretStr = Field(min_length=1)
 
-    database: SecretStr = Field(alias="POSTGRES_DATABASE",min_length=1)
+    database: SecretStr = Field(min_length=1)
 
-    username: SecretStr = Field(alias="POSTGRES_USER",min_length=1)
+    username: SecretStr = Field(min_length=1)
 
-    password: SecretStr = Field(alias="POSTGRES_PASSWORD",min_length=1)
+    password: SecretStr = Field(min_length=1)
 
     port: int = Field(
         default=5432,
-        alias="POSTGRES_PORT",
         ge=1,
         le=65535
     )
@@ -96,20 +94,17 @@ class PostgreSQLSettings(BaseModel):
 class ETLSettings(BaseModel):
     batch_size: int = Field(
         default=500,
-        alias="DEFAULT_BATCH_SIZE",
         gt=0
     )
 
     max_retries: int = Field(
         default=3,
-        alias="MAX_RETRIES",
         ge=0,
         le=10
     )
 
     retry_delay: int = Field(
         default=5,
-        alias="RETRY_DELAY",
         ge=1
     )
 
@@ -119,14 +114,10 @@ class ETLSettings(BaseModel):
 # ============================================================
 
 class LoggingSettings(BaseModel):
-    log_level: LogLevel = Field(
-        default=LogLevel.INFO,
-        alias="LOG_LEVEL"
-    )
+    log_level: LogLevel 
 
     log_directory: Path = Field(
-        default=Path("etl/logs"),
-        alias="LOG_DIRECTORY"
+        default=Path("etl/logs")
     )
 
 
@@ -136,8 +127,7 @@ class LoggingSettings(BaseModel):
 
 class BackupSettings(BaseModel):
     backup_directory: Path = Field(
-        default=Path("etl/backup"),
-        alias="BACKUP_DIRECTORY"
+        default=Path("etl/backup")
     )
 
 
@@ -149,7 +139,6 @@ class Settings(BaseSettings):
 
     environment: Environment = Field(
         default=Environment.DEVELOPMENT,
-        alias="APP_ENV"
     )
 
     erp: ERPSettings
@@ -163,11 +152,17 @@ class Settings(BaseSettings):
     backup: BackupSettings = Field(default_factory=BackupSettings)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        populate_by_name=True,
-        extra="ignore",
-        frozen=True,
+    env_file=".env",
+    env_file_encoding="utf-8",
+
+    # Enables nested models using "__"
+    env_nested_delimiter="__",
+
+    populate_by_name=True,
+
+    extra="ignore",
+
+    frozen=True,
     )
 
 
