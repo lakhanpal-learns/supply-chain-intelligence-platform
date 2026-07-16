@@ -1,25 +1,31 @@
 from ..clients.erpnext_client import ERPNextClient
+from .exceptions import ERPNextError
 
 client = ERPNextClient()
 
-print(client.health_check())
+try:
+    print(client.health_check())
 
-items = client.get_documents(
-    "Item",
-    {
-        "limit_page_length": 5,
-    },
-)
+    items = client.get_documents(
+        "Item",
+        {
+            "limit_page_length": 5,
+        },
+    )
 
-from etl.config.settings import settings
+    response = client.get_all_documents("Item")
 
-print("API Key:", settings.erp.api_key)
-print("Secret Length:", len(settings.erp.api_secret))
-print("Secret Repr:", repr(settings.erp.api_secret))
+    print(type(response))
+    print(response.success)
+    print(response.status_code)
 
-print(items)
+    if response.success:
+        print(response.data)
 
+    print(items)
 
-
-# python -m etl.clients.t.py
+except ERPNextError as exc:
+    print(exc)
+    
+# python -m etl.clients.t
 # python -m etl.config.test_config

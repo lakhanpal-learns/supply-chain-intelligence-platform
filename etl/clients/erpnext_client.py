@@ -2,8 +2,20 @@ from __future__ import annotations
 
 from .base_client import BaseClient
 from ..config.settings import settings
+from .response import APIResponse
+from requests.exceptions import (
+    ConnectionError,
+    HTTPError,
+    Timeout,
+)
 
-
+from .exceptions import (
+    ERPNextAPIError,
+    ERPNextAuthenticationError,
+    ERPNextConnectionError,
+    ERPNextResponseError,
+    ERPNextTimeoutError,
+)
 class ERPNextClient(BaseClient):
 
     def __init__(self):
@@ -26,7 +38,7 @@ class ERPNextClient(BaseClient):
         )
 
         # Temporary Debug
-        print(self.session.headers)
+        # print(self.session.headers)
 
     # Health Check
     def health_check(self) -> bool:
@@ -44,27 +56,52 @@ class ERPNextClient(BaseClient):
     self,
     endpoint: str,
     params: dict | None = None,
-    ):
+    ) -> APIResponse:
 
-        response = self.session.get(
-            f"{self.base_url}/api/{endpoint}",
-            params=params,
-            timeout=self.timeout,
-        )
-        
-        # tempeory dubug 
-        print("=" * 50)
-        print("Status Code :", response.status_code)
-        print("Response Body:")
-        print(response.text)
-        print("=" * 50)
+        try:
 
-        if response.status_code != 200:
-            print("Status:", response.status_code)
-            print("Body:", response.text)
-            return None
+            response = self.session.get(
+                f"{self.base_url}/api/{endpoint}",
+                params=params,
+                timeout=self.timeout,
+            )
 
-        return response.json()
+            response.raise_for_status()
+
+            payload = response.json()
+
+            return APIResponse(
+                success=True,
+                status_code=response.status_code,
+                data=payload.get("data"),
+                message=None,
+            )
+
+        except Timeout as exc:
+            raise ERPNextTimeoutError(
+                "Request timed out."
+            ) from exc
+
+        except ConnectionError as exc:
+            raise ERPNextConnectionError(
+                "Unable to connect to ERPNext."
+            ) from exc
+
+        except HTTPError as exc:
+
+            if response.status_code == 401:
+                raise ERPNextAuthenticationError(
+                    "Invalid API credentials."
+                ) from exc
+
+            raise ERPNextAPIError(
+                f"ERPNext returned HTTP {response.status_code}"
+            ) from exc
+
+        except ValueError as exc:
+            raise ERPNextResponseError(
+                "Invalid JSON response."
+            ) from exc
 
     # Now every future method simply calls
 
@@ -97,6 +134,53 @@ class ERPNextClient(BaseClient):
 
         return self._get(endpoint)
     
+    def get_all_documents(
+    self,
+    doctype: str,
+    page_size: int = 500,
+    ) -> APIResponse:
+        """
+        Retrieve all records for a DocType using ERPNext pagination.
+
+        Args:
+            doctype: ERPNext DocType name.
+            page_size: Number of records per API request.
+
+        Returns:
+            APIResponse containing all records.
+        """
+
+        all_records = []
+        offset = 0
+
+        while True:
+
+            response = self.get_documents(
+                doctype=doctype,
+                params={
+                    "limit_start": offset,
+                    "limit_page_length": page_size,
+                },
+            )
+
+            records = response.data
+
+            # No more records
+            if not records:
+                break
+
+            # Add current page to final list
+            all_records.extend(records)
+
+            # Next page
+            offset += page_size
+
+        return APIResponse(
+            success=True,
+            status_code=200,
+            data=all_records,
+            message=f"Retrieved {len(all_records)} records.",
+        )
 
 
 # usage 
