@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .base_client import BaseClient
-from config.settings import settings
+from ..config.settings import settings
 
 
 class ERPNextClient(BaseClient):
@@ -9,26 +9,29 @@ class ERPNextClient(BaseClient):
     def __init__(self):
 
         super().__init__(
-            base_url=settings.erp.base_url,
-            timeout=settings.erp.timeout,
-        )
+        base_url=str(settings.erp.base_url),
+        timeout=settings.erp.timeout,
+    )
 
         self.session.headers.update(
             {
                 "Authorization": (
                     f"token "
-                    f"{settings.erp.api_key}:"
-                    f"{settings.erp.api_secret}"
+                    f"{settings.erp.api_key.get_secret_value()}:"
+                    f"{settings.erp.api_secret.get_secret_value()}"
                 ),
                 "Accept": "application/json",
                 "Content-Type": "application/json",
             }
         )
+
+        # Temporary Debug
+        print(self.session.headers)
+
     # Health Check
     def health_check(self) -> bool:
-
         response = self.session.get(
-            f"{self.base_url}/method/ping",
+            f"{self.base_url}/api/method/ping",
             timeout=self.timeout,
         )
 
@@ -44,15 +47,25 @@ class ERPNextClient(BaseClient):
     ):
 
         response = self.session.get(
-            f"{self.base_url}/{endpoint}",
+            f"{self.base_url}/api/{endpoint}",
             params=params,
             timeout=self.timeout,
         )
+        
+        # tempeory dubug 
+        print("=" * 50)
+        print("Status Code :", response.status_code)
+        print("Response Body:")
+        print(response.text)
+        print("=" * 50)
 
-        response.raise_for_status()
+        if response.status_code != 200:
+            print("Status:", response.status_code)
+            print("Body:", response.text)
+            return None
 
         return response.json()
-    
+
     # Now every future method simply calls
 
     # return self._get(...)
@@ -87,12 +100,12 @@ class ERPNextClient(BaseClient):
 
 
 # usage 
-client = ERPNextClient()
+# client = ERPNextClient()
 
-print(client.health_check())
+# print(client.health_check())
 
-# usage get document 
+# # usage get document 
 
-client.get_documents("Item")
+# client.get_documents("Item")
 
 
