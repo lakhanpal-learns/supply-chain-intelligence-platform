@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from ..logging.logger import logger
 from .base_client import BaseClient
 from ..config.settings import settings
 from .response import APIResponse
@@ -70,6 +70,13 @@ class ERPNextClient(BaseClient):
 
             payload = response.json()
 
+            logger.info(
+                "GET %s | Status=%s | Records=%d",
+                response.request.path_url,
+                response.status_code,
+                len(payload.get("data", [])),
+            )
+
             return APIResponse(
                 success=True,
                 status_code=response.status_code,
@@ -78,18 +85,33 @@ class ERPNextClient(BaseClient):
             )
 
         except Timeout as exc:
+            logger.error(
+                "Request timed out."
+            )
+
             raise ERPNextTimeoutError(
                 "Request timed out."
             ) from exc
 
         except ConnectionError as exc:
+            logger.error(
+                "Unable to connect to ERPNext."
+            )
+
             raise ERPNextConnectionError(
                 "Unable to connect to ERPNext."
             ) from exc
 
         except HTTPError as exc:
+            logger.error(
+                f"HTTP {response.status_code}"
+            ) 
 
             if response.status_code == 401:
+                logger.error(
+                    "Authentication failed."
+                )
+
                 raise ERPNextAuthenticationError(
                     "Invalid API credentials."
                 ) from exc
@@ -99,6 +121,10 @@ class ERPNextClient(BaseClient):
             ) from exc
 
         except ValueError as exc:
+            logger.error(
+                "Invalid JSON response."
+            )
+
             raise ERPNextResponseError(
                 "Invalid JSON response."
             ) from exc
